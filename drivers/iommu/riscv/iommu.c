@@ -1804,6 +1804,11 @@ static int riscv_iommu_map_pages(struct iommu_domain *iommu_domain,
 	if (!domain->pgtbl.ops.map_pages)
 		return -ENODEV;
 
+	if (!strcmp(dev_name(iommu_domain->dev), "0000:00:04.0")) {
+		printk("%s== iova 0x%lx phys 0x%llx\n", __func__, iova, phys);
+		dump_stack();
+	}
+
 	return domain->pgtbl.ops.map_pages(&domain->pgtbl.ops, iova, phys,
 					   pgsize, pgcount, prot, gfp, mapped);
 }

@@ -436,6 +436,8 @@ int iommu_probe_device(struct device *dev)
 			goto err_unlock;
 	}
 
+	group->default_domain->dev = dev;
+
 	mutex_unlock(&group->mutex);
 	iommu_group_put(group);
 
