@@ -94,6 +94,7 @@ struct iommu_domain_geometry {
 
 struct iommu_domain {
 	unsigned type;
+	struct device *dev;
 	const struct iommu_domain_ops *ops;
 	unsigned long pgsize_bitmap;	/* Bitmap of page sizes in use */
 	struct iommu_domain_geometry geometry;
