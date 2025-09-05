@@ -4,13 +4,13 @@ LROOT=$PWD
 JOBCOUNT=${JOBCOUNT=$(nproc)}
 export ARCH=riscv
 export CROSS_COMPILE=riscv64-linux-gnu-
-export INSTALL_PATH=$LROOT/rootfs_debian_riscv/boot/
-export INSTALL_MOD_PATH=$LROOT/rootfs_debian_riscv/
-export INSTALL_HDR_PATH=$LROOT/rootfs_debian_riscv/usr/
+export INSTALL_PATH=$LROOT/rootfs_ubuntu_riscv/boot/
+export INSTALL_MOD_PATH=$LROOT/rootfs_ubuntu_riscv/
+export INSTALL_HDR_PATH=$LROOT/rootfs_ubuntu_riscv/usr/
 
-kernel_build=$PWD/rootfs_debian_riscv/usr/src/linux/
-rootfs_path=$PWD/rootfs_debian_riscv
-rootfs_image=$PWD/rootfs_debian_riscv.ext4
+kernel_build=$PWD/rootfs_ubuntu_riscv/usr/src/linux/
+rootfs_path=$PWD/rootfs_ubuntu_riscv
+rootfs_image=$PWD/rootfs_ubuntu_riscv.ext4
 
 rootfs_size=2048
 SMP="-smp 4"
@@ -58,8 +58,8 @@ prepare_rootfs(){
 		if [ ! -d $rootfs_path ]; then
 			echo "decompressing rootfs..."
 			# split -d -b 80m rootfs_debian_riscv.tar.xz -- rootfs_debian_riscv.part 
-			cat rootfs_debian_riscv.part0* > rootfs_debian_riscv.tar.xz
-			tar -Jxf rootfs_debian_riscv.tar.xz
+			cat rootfs_ubuntu_riscv.part0* > rootfs_ubuntu_riscv.tar.xz
+			tar -Jxf rootfs_ubuntu_riscv.tar.xz
 		fi
 }
 
@@ -68,7 +68,7 @@ build_kernel_devel(){
 	echo "kernel version: $kernver"
 
 	mkdir -p $kernel_build
-	rm rootfs_debian_riscv/lib/modules/$kernver/build
+	rm rootfs_ubuntu_riscv/lib/modules/$kernver/build
 	cp -a include $kernel_build
 	cp Makefile .config Module.symvers System.map vmlinux $kernel_build
 	mkdir -p $kernel_build/arch/riscv/
@@ -81,11 +81,11 @@ build_kernel_devel(){
 	cp -a arch/riscv/kernel/vdso $kernel_build/arch/riscv/kernel/
 	cp -a lib/vdso $kernel_build/lib/
 
-	ln -s /usr/src/linux rootfs_debian_riscv/lib/modules/$kernver/build
+	ln -s /usr/src/linux rootfs_ubuntu_riscv/lib/modules/$kernver/build
 
 	# cp from debian linux-kbuild package
-	cp -a $rootfs_path/usr/lib/linux-kbuild-6.5.0-5/scripts $kernel_build
-	cp -a $rootfs_path/usr/lib/linux-kbuild-6.5.0-5/tools $kernel_build
+	cp -a $rootfs_path/usr/src/linux-headers-6.14.0-22-generic/scripts $kernel_build
+	cp -a $rootfs_path/usr/src/linux-headers-6.14.0-22-generic/tools $kernel_build
 
 	cp  scripts/module.lds $kernel_build/scripts/
 }
@@ -105,7 +105,7 @@ update_rootfs(){
 			echo "update rootfs ..."
 
 			mkdir -p $rootfs_path
-			echo "mount ext4 image into rootfs_debian_riscv"
+			echo "mount ext4 image into rootfs_ubunturiscv"
 			mount -t ext4 $rootfs_image $rootfs_path -o loop
 
 			make install
@@ -145,7 +145,7 @@ build_rootfs(){
 
 }
 
-QEMU=qemu-system-riscv64-8
+QEMU=qemu-system-riscv64-9
 machine_arg="-machine virt,aia=aplic-imsic,aia-guests=4  -cpu rv64 -m 1024 $SMP -nographic"
 kernel_img="-bios opensbi-riscv64-generic-fw_dynamic.bin -kernel arch/riscv/boot/Image"
 
@@ -158,12 +158,12 @@ debug_arg="loglevel=8 sched_debug"
 kernel_args="$rootfs_arg $kernel_arg $debug_arg $crash_arg $debug_arg"
 
 # devices
-device_arg+=" -device x-riscv-iommu-pci,addr=1.0"
+device_arg+=" -device riscv-iommu-pci,addr=1.0"
 device_arg+=" -drive if=none,file=$rootfs_image,id=hd0 -device virtio-blk-pci,drive=hd0,disable-legacy=on,disable-modern=off,iommu_platform=on,ats=on" 
-device_arg+=" -device virtio-net-device,netdev=usernet -netdev user,id=usernet,hostfwd=tcp:127.0.0.1:5555-:22"
-device_arg+=" --fsdev local,id=kmod_dev,path=./kmodules,security_model=none -device virtio-9p-device,fsdev=kmod_dev,mount_tag=kmod_mount -device igb"
+device_arg+=" -device virtio-net-device,netdev=usernet -netdev user,id=usernet"
+device_arg+=" --fsdev local,id=kmod_dev,path=./kmodules,security_model=none -device virtio-9p-device,fsdev=kmod_dev,mount_tag=kmod_mount"
 
-guest_arg=" -drive file=guest.ext4,read-only=off,id=nvme1 -device nvme,serial=87654321,drive=nvme1,addr=4.0"
+guest_arg=" -drive if=none,file=guest.ext4,read-only=off,id=nvme1 -device nvme,serial=87654321,drive=nvme1,addr=4.0"
 
 # add "nokaslr" into kernel command line or disable CONFIG_RANDOMIZE_BASE
 run_qemu_debian(){
